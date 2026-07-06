@@ -1,4 +1,4 @@
-# Envio de Dados Blob — Monitoramento de Distribuidores
+# Envio de Dados — Monitoramento de Distribuidores
 
 ## Resumo Executivo
 
