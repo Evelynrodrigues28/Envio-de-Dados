@@ -1,4 +1,4 @@
-# Automação de Cobrança — Monitoramento de Sell-out por Distribuidor
+# Envio de Dados — Monitoramento de Sell-out por Distribuidor
 
 ## Visão Geral
 
