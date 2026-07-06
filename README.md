@@ -1,4 +1,4 @@
-# Validação de Dados Blob — Monitoramento de Distribuidores
+# Envio de Dados Blob — Monitoramento de Distribuidores
 
 ## Resumo Executivo
 
@@ -10,7 +10,7 @@ O processo substitui uma rotina 100% manual que demandava **~2 horas/dia** de um
 
 ## Problema
 
-A equipe de Inteligência de Vendas monitora aproximadamente 50 distribuidores que devem enviar diariamente seus dados de sell-out (notas fiscais) via Blob Storage. Quando um distribuidor não envia os dados dentro do SLA esperado, é necessário:
+A equipe de Inteligência de Vendas monitora aproximadamente 52 distribuidores que devem enviar diariamente seus dados de sell-out (notas fiscais) via Blob Storage. Quando um distribuidor não envia os dados dentro do SLA esperado, é necessário:
 
 1. Verificar quais distribuidores estão em atraso
 2. Identificar a data da última nota fiscal vs. data do último arquivo recebido
