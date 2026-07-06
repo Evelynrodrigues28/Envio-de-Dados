@@ -1,4 +1,4 @@
-# Envio de Dados  — Monitoramento de Distribuidores
+# Validação de Dados Blob — Monitoramento de Distribuidores
 
 ## Resumo Executivo
 
@@ -10,7 +10,7 @@ O processo substitui uma rotina 100% manual que demandava **~2 horas/dia** de um
 
 ## Problema
 
-A equipe de Inteligência de Vendas monitora aproximadamente 52 distribuidores que devem enviar diariamente seus dados de sell-out  via Blob Storage. Quando um distribuidor não envia os dados dentro do SLA esperado, é necessário:
+A equipe de Inteligência de Vendas monitora aproximadamente 50 distribuidores que devem enviar diariamente seus dados de sell-out (notas fiscais) via Blob Storage. Quando um distribuidor não envia os dados dentro do SLA esperado, é necessário:
 
 1. Verificar quais distribuidores estão em atraso
 2. Identificar a data da última nota fiscal vs. data do último arquivo recebido
@@ -186,62 +186,86 @@ Equipe de Inteligência de Vendas
 
 ## Como Reproduzir
 
-### Quickstart
+Os scripts da pasta `reproducao/` funcionam em **qualquer ambiente Python** —
+Databricks, VSCode, terminal local, CI/CD — sem necessidade de infraestrutura.
 
-Execute os 3 scripts da pasta `reproducao/` em sequência em um cluster Databricks:
+### Instalacao (ambiente local)
 
 ```bash
-# 1. Preparar ambiente (cria planilha Excel + tabela no Unity Catalog)
+pip install -r reproducao/requirements.txt
+```
+
+Dependencias: `pandas`, `openpyxl`, `pyarrow`, `requests`.
+PySpark **nao e necessario** para execucao local.
+
+### Quickstart
+
+```bash
+# 1. Preparar ambiente (cria planilha Excel + tabela simulada)
 python reproducao/01_setup_dados_simulados.py
 
-# 2. Validar dados e gerar e-mails de cobrança
+# 2. Validar dados e gerar e-mails de cobranca
 python reproducao/02_validacao_e_cobranca.py
 
-# 3. Simular o disparo de e-mails (modo simulação por padrão)
+# 3. Simular o disparo de e-mails (simulacao por padrao)
 python reproducao/03_disparo_emails.py
 ```
+
+### Compatibilidade de ambientes
+
+| Ambiente | Suporte | Observacao |
+| --- | --- | --- |
+| Databricks Runtime 13.x+ | Completo | Salva tabela no Unity Catalog via Spark |
+| VSCode / terminal local (Linux, Mac) | Completo | Salva tabela como Parquet local em /tmp |
+| VSCode / terminal local (Windows) | Completo | Salva em %TEMP% (deteccao automatica) |
+| GitHub Actions / CI-CD | Completo | Mesma execucao local sem Spark |
+| Google Colab | Completo | Mesma execucao local sem Spark |
+
+A deteccao de ambiente e automatica: o script tenta importar PySpark e, se nao encontrar,
+usa pandas + Parquet local. Nenhuma alteracao de codigo e necessaria.
 
 ### Estrutura dos Arquivos
 
 ```
 reproducao/
-├── 01_setup_dados_simulados.py    # Gera planilha + tabela simulada
-├── 02_validacao_e_cobranca.py     # Valida dados e gera payloads
-├── 03_disparo_emails.py           # Dispara e-mails (simulação ou produção)
-└── create_table_simulada.sql      # DDL alternativo (para criar tabela via SQL puro)
++-- 01_setup_dados_simulados.py    # Gera planilha + tabela simulada
++-- 02_validacao_e_cobranca.py     # Valida dados e gera payloads
++-- 03_disparo_emails.py           # Dispara e-mails (simulacao ou producao)
++-- create_table_simulada.sql      # DDL alternativo (Databricks e DuckDB)
++-- requirements.txt               # Dependencias Python
 ```
 
-### Descrição de Cada Arquivo
+### Descricao de Cada Arquivo
 
 | Arquivo | O que faz | Output |
 | --- | --- | --- |
-| `01_setup_dados_simulados.py` | Gera 15 distribuidores fictícios em Excel, cria tabela no Unity Catalog com dados simulados (alguns em dia, outros em atraso) | `/tmp/config_distribuidores.xlsx` + tabela UC |
-| `02_validacao_e_cobranca.py` | Lê config + consulta UC, aplica regra de SLA (3 dias úteis), gera payloads de e-mail para os atrasados | `/tmp/payloads_cobranca.json` |
-| `03_disparo_emails.py` | Lê os payloads e envia (ou simula envio), com barra de progresso e log de auditoria | `/tmp/log_envio_cobranca.json` |
-| `create_table_simulada.sql` | Alternativa SQL para criar a tabela manualmente, sem depender do script Python | Tabela no UC |
+| `01_setup_dados_simulados.py` | Gera 15 distribuidores ficticios em Excel, cria tabela simulada (Unity Catalog ou Parquet local) | `config_distribuidores.xlsx` + tabela |
+| `02_validacao_e_cobranca.py` | Le config + consulta tabela, aplica regra de SLA (3 dias uteis), gera payloads de e-mail | `payloads_cobranca.json` |
+| `03_disparo_emails.py` | Le os payloads e envia (ou simula envio), com barra de progresso e log de auditoria | `log_envio_cobranca.json` |
+| `create_table_simulada.sql` | Alternativa SQL — variacao Databricks (current_date()) e DuckDB (CURRENT_DATE) | Tabela no UC ou DuckDB |
+| `requirements.txt` | Lista de dependencias Python para instalacao local | — |
 
-### Configurações para Adaptar
+### Configuracoes para Adaptar
 
-Cada script possui um bloco `CONFIGURAÇÕES` no topo. Para adaptar ao seu ambiente:
+Cada script possui um bloco `CONFIGURACOES` no topo. Para adaptar ao seu ambiente:
 
-| Variável | Arquivo | O que alterar |
+| Variavel | Arquivo | O que alterar |
 | --- | --- | --- |
-| `CATALOG` | 01, 02 | Nome do seu catalog no Unity Catalog |
-| `SCHEMA` | 01, 02 | Nome do schema |
-| `SLA_DIAS_UTEIS` | 02 | Quantidade de dias úteis de tolerância |
+| `CATALOG` | 01, 02 | Nome do catalog no Unity Catalog (ignorado em execucao local) |
+| `SCHEMA` | 01, 02 | Nome do schema (ignorado em execucao local) |
+| `SLA_DIAS_UTEIS` | 02 | Quantidade de dias uteis de tolerancia |
 | `EXCECOES_D3` | 02 | IDs de distribuidores com SLA diferenciado |
 | `MODO` | 02 | "Teste" (redireciona e-mails) ou "Producao" |
-| `SIMULAR_ENVIO` | 03 | `True` (não envia nada) ou `False` (envia de verdade) |
-| `WEBHOOK_URL` | 03 | URL do Power Automate ou webhook |
+| `SIMULAR_ENVIO` | 03 | `True` (nao envia nada) ou `False` (envia de verdade) |
+| `WEBHOOK_URL` | 03 | URL do Power Automate — via variavel de ambiente `WEBHOOK_URL` ou `dbutils.secrets` |
 
-### Pré-requisitos
+### Pre-requisitos
 
-* Databricks Runtime 13.x+ com Unity Catalog habilitado
-* Pacotes Python: `openpyxl`, `pandas` (instalar via `%pip install openpyxl`)
-* Permissão de CREATE TABLE no catalog/schema configurado
+* Python 3.8+
+* Pacotes: `pip install -r reproducao/requirements.txt`
+* Databricks (opcional): Runtime 13.x+ com Unity Catalog e permissao CREATE TABLE
 * Para envio real: endpoint HTTP configurado (Power Automate, Logic Apps, etc.)
 
----
 
 ## Fontes de Dados
 
